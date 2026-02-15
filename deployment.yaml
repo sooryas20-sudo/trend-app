@@ -16,4 +16,4 @@ spec:
       - name: trend-app
         image: sooryas20/trend-app:latest
         ports:
-        - containerPort: 80
+        - containerPort: 3000
