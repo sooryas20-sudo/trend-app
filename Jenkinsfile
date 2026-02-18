@@ -11,8 +11,10 @@ pipeline {
         }
         stage('Build App') {
             steps {
-                // RUN DIRECTLY IN ROOT - package.json is here
-                sh 'npm install' 
+                // package.json is inside the dist folder in your repo
+                dir('dist') { 
+                    sh 'npm install'
+                }
             }
         }
         stage('Docker Build & Push') {
@@ -25,7 +27,7 @@ pipeline {
         }
         stage('Deploy to EKS') {
             steps {
-                // deployment.yaml and service.yaml are also at the root
+                // YAML files are at the root
                 sh "kubectl apply -f deployment.yaml"
                 sh "kubectl apply -f service.yaml"
             }
