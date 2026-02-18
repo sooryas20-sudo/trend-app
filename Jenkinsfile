@@ -9,23 +9,20 @@ pipeline {
                 checkout scm
             }
         }
-        stage('Build App') {
-            steps {
-                // RUN DIRECTLY IN ROOT - package.json is here
-                sh 'npm install'
-            }
-        }
+        // STAGE REMOVED: npm install cannot run without package.json 
+
         stage('Docker Build & Push') {
             steps {
-                // Use the app folder for your Dockerfile
+                // Points to the folder containing your Dockerfile
                 sh "docker build -t sooryas20/trend-app:latest ./app"
                 sh "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"
                 sh "docker push sooryas20/trend-app:latest"
             }
         }
+
         stage('Deploy to EKS') {
             steps {
-                // YAML files are also at the root
+                // Manifests are at the root level
                 sh "kubectl apply -f deployment.yaml"
                 sh "kubectl apply -f service.yaml"
             }
