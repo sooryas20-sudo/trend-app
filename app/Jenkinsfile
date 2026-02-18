@@ -2,6 +2,7 @@ pipeline {
     agent any
     
     environment {
+        // Use the ID you created in Jenkins credentials
         DOCKERHUB_CREDENTIALS = credentials('docker-hub-creds')
     }
 
@@ -14,16 +15,17 @@ pipeline {
 
         stage('Build App') {
             steps {
-                dir('dist') { // This is where your package.json lives
+                // Correcting the path based on your terminal output
+                dir('dist') { 
                     sh 'npm install'
-                }
+                } 
             }
         }
 
         stage('Docker Build & Push') {
             steps {
                 // We use the app folder because that's where your Dockerfile is
-                sh "docker build -t sooryas20/trend-app:latest ./app" 
+                sh "docker build -t sooryas20/trend-app:latest ./app"
                 sh "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"
                 sh "docker push sooryas20/trend-app:latest"
             }
