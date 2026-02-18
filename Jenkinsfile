@@ -11,23 +11,26 @@ pipeline {
         }
         stage('Build App') {
             steps {
-                // RUN DIRECTLY IN ROOT - package.json is here
-                sh 'npm install' 
+                // Based on your terminal, we must enter trend-app first
+                dir('trend-app/dist') { 
+                    sh 'npm install'
+                }
             }
         }
         stage('Docker Build & Push') {
             steps {
-                // Use './app' for the Dockerfile location
-                sh "docker build -t sooryas20-sudo/trend-app:latest ./app"
+                // We point to the folder containing the Dockerfile
+                sh "docker build -t sooryas20/trend-app:latest ./trend-app/app"
                 sh "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"
-                sh "docker push sooryas20-sudo/trend-app:latest"
+                sh "docker push sooryas20/trend-app:latest"
             }
         }
         stage('Deploy to EKS') {
             steps {
-                // Ensure these yaml files are also in your root
-                sh "kubectl apply -f deployment.yaml"
-                sh "kubectl apply -f service.yaml"
+                dir('trend-app') {
+                    sh "kubectl apply -f deployment.yaml"
+                    sh "kubectl apply -f service.yaml"
+                }
             }
         }
     }
