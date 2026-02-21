@@ -20,7 +20,7 @@ data "aws_ami" "ubuntu" {
 
 # 2. Updated Security Group (Includes Jenkins & Monitoring Ports)
 resource "aws_security_group" "trend_app_sg" {
-  name        = "trend-app-sg"
+  name        = "trend-app-sg-v3"
   description = "Allow SSH, HTTP, Jenkins, and Monitoring"
 
   ingress {
@@ -110,4 +110,54 @@ resource "aws_instance" "web" {
 
 output "server_public_ip" {
   value = aws_instance.web.public_ip
+}
+
+
+# 1. IAM Roles for EKS (Cluster & Node Group)
+resource "aws_iam_role" "eks_cluster" {
+  name = "trend-cluster-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{ Action = "sts:AssumeRole", Effect = "Allow", Principal = { Service = "eks.amazonaws.com" } }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cluster_AmazonEKSClusterPolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.eks_cluster.name
+}
+
+# 2. VPC and Networking (Required for EKS)
+resource "aws_vpc" "eks_vpc" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  tags                 = { Name = "trend-eks-vpc" }
+}
+
+resource "aws_subnet" "subnet_1" {
+  vpc_id            = aws_vpc.eks_vpc.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "ap-south-1a"
+  map_public_ip_on_launch = true
+  tags              = { Name = "trend-subnet-1", "kubernetes.io/cluster/trend-cluster" = "shared" }
+}
+
+resource "aws_subnet" "subnet_2" {
+  vpc_id            = aws_vpc.eks_vpc.id
+  cidr_block        = "10.0.2.0/24"
+  availability_zone = "ap-south-1b"
+  map_public_ip_on_launch = true
+  tags              = { Name = "trend-subnet-2", "kubernetes.io/cluster/trend-cluster" = "shared" }
+}
+
+# 3. EKS Cluster Resource
+resource "aws_eks_cluster" "trend_cluster" {
+  name     = "trend-cluster"
+  role_arn = aws_iam_role.eks_cluster.arn
+
+  vpc_config {
+    subnet_ids = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
+  }
+
+  depends_on = [aws_iam_role_policy_attachment.cluster_AmazonEKSClusterPolicy]
 }
